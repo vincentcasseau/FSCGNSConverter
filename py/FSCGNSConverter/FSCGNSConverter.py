@@ -937,7 +937,6 @@ class FSCGNSConverter:
         # removed
         C._recoverBCsGeometric(z, bcInfo, removeBC=True,
                                missingBCInfo=missingBCInfo)
-        return None
 
         # Fix zones from which BC data should be added
         missingBCInfo = Cmpi.allgather(missingBCInfo)
@@ -951,9 +950,10 @@ class FSCGNSConverter:
                 missingBCInfoDict.setdefault(f"{bcName}:{bcType}", []).append(bcData)
         if not missingBCInfoDict:
             return
-        
+
         for bcName, bcData in missingBCInfoDict.items():
-            if len(bcData) > 1: missingBCInfoDict[bcName] = T.join(bcData)
+            if len(bcData) > 1:
+                missingBCInfoDict[bcName] = T.join(bcData)
             else: missingBCInfoDict[bcName] = bcData[0]
             # if Cmpi.master: print(bcName, bcData)
 
@@ -1006,18 +1006,18 @@ class FSCGNSConverter:
             nnewFaces = validPos.size
             if nnewFaces == 0:
                 continue
-            
+
             hookV = C.createHook(zf, function="nodes")
             idsV = C.identifyNodes(hookV, bcData)
-            # print(f"[{Cmpi.rank}] idsV", idsV)
+            print(f"[{Cmpi.rank}] idsV", idsV)
             validIds = ids[mask] - 1  # keep non -1 indices
             faceList = indicesF[validIds]
-            # print(f"[{Cmpi.rank}] faceList", faceList)
+            print(f"[{Cmpi.rank}] faceList", faceList)
 
             n_zoneBCs = Internal.getNodesFromType1(z, "ZoneBC_t")
             n_bcs = Internal.getNodesFromType2(n_zoneBCs, "BC_t")
             for n_bc in n_bcs:
-                # print(f"[{Cmpi.rank}] ---", n_bc[0].rsplit("_", 1)[0], bcName.rsplit("_", 1)[0])
+                print(f"[{Cmpi.rank}] ---", n_bc[0].rsplit("_", 1)[0], bcName.rsplit("_", 1)[0])
                 if not (
                     Internal.getName(n_bc).rsplit("_", 1)[0] == bcName.rsplit("_", 1)[0] # TODO
                     and Internal.getValue(n_bc) == bcType
@@ -1030,19 +1030,23 @@ class FSCGNSConverter:
                     np_bcer = n_bcer[1]
                     # Append boundary connectivity
                     n_newElts = Internal.getElementNodes(bcData)
-                    # print(f"[{Cmpi.rank}] validIds", validIds)
-                    # print(f"[{Cmpi.rank}] validPos", validPos)
-                    # print(f"[{Cmpi.rank}] n_newElts", n_newElts)
+                    print(f"[{Cmpi.rank}] validIds", validIds)
+                    print(f"[{Cmpi.rank}] validPos", validPos)
+                    print(f"[{Cmpi.rank}] n_newElts", n_newElts)
                     for n_newElt in n_newElts:
                         nvpe = Internal.eltNo2EltName(n_newElt[1][0])[1]
                         n_newEC = Internal.getNodeFromName1(n_newElt, "ElementConnectivity")
-                        # print(f"[{Cmpi.rank}] nvpe", nvpe)
-                        # print(f"[{Cmpi.rank}] n_newEC[1]", n_newEC[1])
-                        # print(f"[{Cmpi.rank}] n_newEC[1].reshape(-1, nvpe)", n_newEC[1].reshape(-1, nvpe))
+                        print(f"[{Cmpi.rank}] nvpe", nvpe)
+                        print(f"[{Cmpi.rank}] n_newEC[1]", n_newEC[1])
+                        print(f"[{Cmpi.rank}] n_newEC[1].reshape(-1, nvpe)", n_newEC[1].reshape(-1, nvpe))
                         np_newEC = n_newEC[1].reshape(-1, nvpe)[validPos].ravel()
                         np_newEC = idsV[np_newEC-1]
+                        print(f"[{Cmpi.rank}] new face =", np_newEC)
+                        zzz = Internal.getNodeFromName(zf, "ElementConnectivity")[1]
+                        print(f"[{Cmpi.rank}] zf face =", zzz[validIds])
+
                         for n_belt in n_belts:
-                            eltNo = Internal.getValue(n_belt)
+                            # eltNo = Internal.getValue(n_belt)
                             # print(f"[{Cmpi.rank}] eltNo", eltNo)
                             np_ber = Internal.getNodeFromName1(n_belt, "ElementRange")[1]
                             # print(f"[{Cmpi.rank}] HH", np_bcer[0][0], np_ber[0], np_bcer[0][1], np_ber[1])
@@ -1069,7 +1073,7 @@ class FSCGNSConverter:
                     raise NotImplementedError
 
         C.freeHook(hookC)
-    
+
     def Convert2FSDM(self):
         """Convert a mesh from CGNS to FS"""
         z_nc = None
